@@ -1,0 +1,19 @@
+{
+  "name": "threejs-tsl-template",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "test": "node --test",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@antfu/eslint-config": "^9.5.1",
+    "simplex-noise": "^4.0.3",
+    "three": "^0.185.0",
+    "tweakpane": "^4.0.5",
+    "vite": "^5.4.10",
+    "zaohua-platform-sdk": "file:./vendor/zaohua-platform-sdk"
+  }
+}

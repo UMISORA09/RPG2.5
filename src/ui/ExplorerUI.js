@@ -75,6 +75,22 @@ export default class ExplorerUI {
           </div>
         </div>
       </header>
+      <section class="surface combat-card hud-part flight-panel" aria-label="Chỉ số chiến đấu">
+        <div class="combat-card-header">
+          <span class="eyebrow">KHÔNG CHIẾN <span class="combat-live-dot"></span></span>
+          <div class="combat-score-badge"><span class="score-label">ĐIỂM:</span> <b data-combat-score>0</b></div>
+        </div>
+        <div class="combat-health-row">
+          <div class="combat-health-track" aria-label="Thanh máu">
+            <i class="combat-health-fill" data-combat-health-fill style="width: 100%;"></i>
+          </div>
+          <span class="combat-health-val" data-combat-health-text>100 HP</span>
+        </div>
+        <div class="combat-card-footer">
+          <span>Hạ địch: <b data-combat-kills>0</b></span>
+          <span class="combat-hint">Bắn: <kbd>J</kbd> / Click</span>
+        </div>
+      </section>
       <section class="surface location-card hud-part flight-panel" aria-label="Thông tin chuyến bay">
         <div class="eyebrow">ĐANG KHÁM PHÁ <span class="live-dot"></span></div>
         <h2>${svg('leaf')}<span data-biome>Vùng hoang sơ</span></h2>
@@ -108,6 +124,10 @@ export default class ExplorerUI {
         </svg>
         <span class="flight-joystick-thumb" aria-hidden="true"></span>
       </div>
+      <button type="button" class="surface touch-fire-button hud-part flight-panel" data-touch-fire aria-label="Nút bắn đạn" hidden>
+        <span class="fire-icon">🔥</span>
+        <span class="fire-text">BẮN</span>
+      </button>
       ${cloudVeilMarkup()}
       <div class="loading-card surface" role="status"><span class="eyebrow">THẾ GIỚI NHỎ, PHIÊU LƯU LỚN</span><h2>Vùng đất đang hình thành</h2><p data-stage>Đang đánh thức thế giới nhỏ này…</p><div class="loading-track"><i></i></div></div>
       <div class="hud-toast surface" role="status" hidden></div>
@@ -269,6 +289,7 @@ export default class ExplorerUI {
           <div><dt><kbd>S</kbd> / <kbd>↓</kbd></dt><dd>Bay xuống (về gần màn hình)</dd></div>
           <div><dt><kbd>A</kbd> / <kbd>←</kbd></dt><dd>Bay sang trái màn hình</dd></div>
           <div><dt><kbd>D</kbd> / <kbd>→</kbd></dt><dd>Bay sang phải màn hình</dd></div>
+          <div><dt><kbd>J</kbd> / <kbd>Click</kbd></dt><dd>Bắn đạn chiến đấu</dd></div>
           <div><dt><kbd>H</kbd> / <kbd>M</kbd></dt><dd>Ẩn hiện giao diện / Bật tắt âm thanh</dd></div>
           <div><dt>Nút góc bản đồ / <kbd>Esc</kbd></dt><dd>Phóng to / Thu nhỏ bản đồ</dd></div>
         </dl>
@@ -285,6 +306,11 @@ export default class ExplorerUI {
     this.biome = root.querySelector('[data-biome]')
     this.x = root.querySelector('[data-x]')
     this.z = root.querySelector('[data-z]')
+    this.combatHealthFill = root.querySelector('[data-combat-health-fill]')
+    this.combatHealthText = root.querySelector('[data-combat-health-text]')
+    this.combatScore = root.querySelector('[data-combat-score]')
+    this.combatKills = root.querySelector('[data-combat-kills]')
+    this.touchFireBtn = root.querySelector('[data-touch-fire]')
     this.dialog = root.querySelector('.help-dialog') || root.querySelector('dialog')
     this.authDialog = root.querySelector('[data-auth-dialog]')
     this.authErrorBanner = root.querySelector('[data-auth-error]')
@@ -310,6 +336,31 @@ export default class ExplorerUI {
       const target = event.target.closest('[data-action]')
       if (target) this.onAction(target.dataset.action, target)
     }, options)
+
+    this.experience.canvas?.addEventListener('pointerdown', (e) => {
+      if (this.isHomeScreen || this.dialog.open || this.authDialog?.open) return
+      this.experience.world?.playerAircraft?.input?.setFiring(true)
+    }, options)
+    window.addEventListener('pointerup', () => {
+      this.experience.world?.playerAircraft?.input?.setFiring(false)
+    }, options)
+
+    if (this.touchFireBtn) {
+      this.touchFireBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.experience.world?.playerAircraft?.input?.setFiring(true)
+      }, options)
+      this.touchFireBtn.addEventListener('pointerup', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.experience.world?.playerAircraft?.input?.setFiring(false)
+      }, options)
+      this.touchFireBtn.addEventListener('pointercancel', (e) => {
+        e.preventDefault()
+        this.experience.world?.playerAircraft?.input?.setFiring(false)
+      }, options)
+    }
     window.addEventListener('keydown', event => this.onKeyDown(event), { ...options, capture: true })
     this.dialog.addEventListener('close', () => this.syncPause(), options)
     if (this.authDialog) {
@@ -461,7 +512,11 @@ export default class ExplorerUI {
     const available = touch && this.ready && player?.enabled === true
     this.root.classList.toggle('is-touch', touch)
     this.root.classList.toggle('has-flight-joystick', available)
-    this.joystick.setEnabled(available && !player.paused && !this.mapExpanded && !this.root.classList.contains('is-cinema') && !this.isHomeScreen)
+    const canControl = available && !player.paused && !this.mapExpanded && !this.root.classList.contains('is-cinema') && !this.isHomeScreen
+    this.joystick.setEnabled(canControl)
+    if (this.touchFireBtn) {
+      this.touchFireBtn.hidden = !canControl
+    }
   }
 
   syncPause() {
@@ -809,6 +864,24 @@ export default class ExplorerUI {
     }
     if (biomeId) this.lastBiomeId = biomeId
     this.biome.textContent = BIOMES[biomeId] ?? 'Vùng hoang sơ'
+
+    const combat = this.experience.world?.dogfightSystem?.getState?.()
+    if (combat) {
+      if (this.combatHealthFill) {
+        const hpPercent = Math.max(0, Math.min(100, (combat.player.health / combat.player.maxHealth) * 100))
+        this.combatHealthFill.style.width = `${hpPercent}%`
+        this.combatHealthFill.classList.toggle('is-low', hpPercent < 30)
+      }
+      if (this.combatHealthText) {
+        this.combatHealthText.textContent = `${Math.ceil(combat.player.health)} / ${combat.player.maxHealth} HP`
+      }
+      if (this.combatScore) {
+        this.combatScore.textContent = String(combat.score)
+      }
+      if (this.combatKills) {
+        this.combatKills.textContent = String(combat.kills)
+      }
+    }
   }
 
   syncAudioControl() {

@@ -22,6 +22,7 @@ export default class AircraftInput {
     this.target = target
     this.keys = createEmptyKeys()
     this.joystick = { x: 0, y: 0 }
+    this.firing = false
     this.isAttached = false
 
     this._onKeyDown = event => this.handleKeyDown(event)
@@ -41,6 +42,10 @@ export default class AircraftInput {
   }
 
   handleKeyDown(event) {
+    if (event.code === 'KeyJ') {
+      this.firing = true
+      return
+    }
     if (event.repeat === true || !CONTROL_CODES.includes(event.code)) {
       return
     }
@@ -48,6 +53,10 @@ export default class AircraftInput {
   }
 
   handleKeyUp(event) {
+    if (event.code === 'KeyJ') {
+      this.firing = false
+      return
+    }
     if (!CONTROL_CODES.includes(event.code)) {
       return
     }
@@ -57,6 +66,7 @@ export default class AircraftInput {
   clear() {
     this.keys = createEmptyKeys()
     this.setJoystick(0, 0)
+    this.firing = false
   }
 
   setJoystick(x, y) {
@@ -70,6 +80,14 @@ export default class AircraftInput {
 
   getKeys() {
     return { ...this.keys }
+  }
+
+  isFiring() {
+    return Boolean(this.firing)
+  }
+
+  setFiring(value) {
+    this.firing = Boolean(value)
   }
 
   dispose() {

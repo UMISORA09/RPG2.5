@@ -194,6 +194,27 @@ export default class TerrainMinimap {
     context.font = '600 9px system-ui, sans-serif'
     context.textAlign = 'center'
     context.fillText('B', this.width / 2, 13)
+
+    // Vẽ chấm đỏ cho các máy bay bot còn sống
+    const bots = this.experience.world?.dogfightSystem?.getAliveBots?.() ?? []
+    for (const bot of bots) {
+      const bx = this.width / 2 + (bot.x - position.x) / this.worldPerPixel
+      const bz = this.height / 2 + (bot.z - position.z) / this.worldPerPixel
+      if (bx >= 2 && bx <= this.width - 2 && bz >= 2 && bz <= this.height - 2) {
+        context.save()
+        context.beginPath()
+        context.arc(bx, bz, 3.5, 0, Math.PI * 2)
+        context.fillStyle = '#ff3b30'
+        context.strokeStyle = '#ffffff'
+        context.lineWidth = 1.2
+        context.shadowColor = 'rgba(255, 59, 48, 0.6)'
+        context.shadowBlur = 4
+        context.fill()
+        context.stroke()
+        context.restore()
+      }
+    }
+
     context.save()
     context.translate(this.width / 2, this.height / 2)
     // Canvas +Y follows world +Z; aircraft yaw 0 points along +X (east).

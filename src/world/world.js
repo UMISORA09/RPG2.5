@@ -22,6 +22,7 @@ import ChunkManager from './chunks/ChunkManager.js'
 import LandmarkRenderer, { createLandmarkAssets } from './landmarks/LandmarkRenderer.js'
 import { warmupLandmarkPipelines } from './landmarks/LandmarkPipelineWarmup.js'
 import { getLandmarkSettings } from './landmarks/landmarkConfig.js'
+import DogfightSystem from './combat/DogfightSystem.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
 import { warmupPrefabPipelines } from './prefabs/PrefabPipelineWarmup.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
@@ -64,6 +65,7 @@ export default class World {
     this.prefabRegistry = null
     this.prefabShadowBounds = null
     this.playerAircraft = null
+    this.dogfightSystem = null
     this.terrainChunkManager = null
     this.prefabWarmup = null
     this.landmarkAssets = null
@@ -182,6 +184,9 @@ export default class World {
 
       this.playerAircraft = new PlayerAircraft(this.experience, { config: this.config })
       this.addSystem(this.playerAircraft)
+
+      this.dogfightSystem = new DogfightSystem(this.experience, { config: this.config })
+      this.addSystem(this.dogfightSystem)
     }
 
     this.regenerate()
@@ -271,6 +276,9 @@ export default class World {
     }
     if (this.playerAircraft?.group) {
       this.playerAircraft.group.visible = !preview
+    }
+    if (this.dogfightSystem?.group) {
+      this.dogfightSystem.group.visible = !preview
     }
     this.landmarkRenderer?.setVisible(!preview)
   }
@@ -475,6 +483,7 @@ export default class World {
     this.lavaBrickRenderer = null
     this.prefabPlacer = null
     this.playerAircraft = null
+    this.dogfightSystem = null
     this.prefabRegistry = null
     this.children.length = 0
     this.group.clear()

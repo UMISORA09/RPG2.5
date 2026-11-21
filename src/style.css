@@ -558,6 +558,395 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
     margin: 0 1px;
 }
 
+/* Thẻ phi công & Badge */
+.pilot-hud-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #244b37;
+    background: #ffffffba;
+    border: 1px solid #ffffffd9;
+    box-shadow: 0 4px 14px #0d281a17;
+}
+.pilot-hud-badge .pilot-emoji {
+    font-size: 15px;
+    line-height: 1;
+}
+.pilot-hud-badge .pilot-name {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-user-card {
+    margin: 0 auto 16px;
+    width: 100%;
+    max-width: 480px;
+}
+.pilot-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-radius: 18px;
+    background: #ffffff59;
+    border: 1px solid #ffffff99;
+    box-shadow: 0 4px 16px #10332212;
+    text-align: left;
+    transition: transform .18s ease, background .18s ease;
+}
+.pilot-profile-card:hover {
+    background: #ffffff73;
+}
+.pilot-profile-avatar {
+    font-size: 28px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: #ffffffaa;
+    box-shadow: inset 0 1px 0 #ffffff, 0 3px 8px #10332214;
+    flex-shrink: 0;
+}
+.pilot-profile-info {
+    flex: 1;
+    min-width: 0;
+}
+.pilot-profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pilot-profile-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e4532;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pilot-profile-badge {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #2f855a;
+    color: #fff;
+}
+.pilot-profile-badge.is-guest-tag {
+    background: #d97706;
+}
+.pilot-profile-stats {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #436955;
+    margin-top: 3px;
+}
+.pilot-profile-stats b {
+    color: #1c422f;
+}
+.pilot-profile-desc {
+    font-size: 10.5px;
+    color: #4b6b5b;
+    margin: 2px 0 0;
+    line-height: 1.4;
+}
+.pilot-profile-actions {
+    flex-shrink: 0;
+}
+.pilot-main-btn {
+    padding: 8px 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #2d7a4d, #1c5234);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    box-shadow: 0 4px 12px #18482e33;
+    border: none;
+    cursor: pointer;
+    transition: transform .18s, filter .18s;
+}
+.pilot-main-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+.pilot-sub-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 11px;
+    border-radius: 12px;
+    background: #ffffff8c;
+    border: 1px solid #ffffffbf;
+    color: #a82e2e;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .18s;
+}
+.pilot-sub-btn svg {
+    width: 13px;
+    height: 13px;
+}
+.pilot-sub-btn:hover {
+    background: #fee2e2;
+}
+
+/* Hộp thoại Đăng nhập / Đăng ký */
+.auth-dialog {
+    padding: 0;
+    border: none;
+    border-radius: 26px;
+    background: #fbfdf9f2;
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    box-shadow: 0 24px 64px #0c2b1b3b, 0 2px 0 #ffffff inset;
+    width: 90vw;
+    max-width: 440px;
+    color: #1d3f2e;
+    overflow: hidden;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+}
+.auth-dialog::backdrop {
+    background: #091a1159;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.auth-close-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 10;
+    background: #ffffff80;
+}
+.auth-close-btn:hover {
+    background: #ffffff;
+}
+.auth-header {
+    padding: 26px 24px 16px;
+    text-align: center;
+    background: linear-gradient(180deg, #eef9f1b3 0%, #ffffff00 100%);
+    border-bottom: 1px solid #dbeef180;
+}
+.auth-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #2b7049;
+    margin-bottom: 6px;
+}
+.auth-header h2 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #17422b;
+    margin: 0 0 4px;
+}
+.auth-header p {
+    font-size: 11px;
+    color: #496d59;
+    margin: 0;
+    line-height: 1.4;
+}
+.auth-tabs {
+    display: flex;
+    border-bottom: 1px solid #e1eee5;
+    background: #edf5f066;
+}
+.auth-tab {
+    flex: 1;
+    padding: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #557766;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all .2s;
+}
+.auth-tab.is-active {
+    color: #1e5a37;
+    background: #ffffff;
+    border-bottom-color: #2f855a;
+}
+.auth-error-banner {
+    margin: 14px 20px 0;
+    padding: 9px 13px;
+    border-radius: 12px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    font-size: 11px;
+    font-weight: 500;
+    text-align: center;
+}
+.auth-form {
+    padding: 20px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    text-align: left;
+}
+.auth-field label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #284e3a;
+}
+.auth-field label .required {
+    color: #dc2626;
+}
+.auth-field label small {
+    font-size: 9px;
+    font-weight: 400;
+    color: #698c79;
+}
+.auth-field input {
+    width: 100%;
+    padding: 10px 13px;
+    border-radius: 12px;
+    border: 1.5px solid #c9ded2;
+    background: #ffffff;
+    font-size: 12px;
+    color: #1a3c2b;
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color .18s, box-shadow .18s;
+}
+.auth-field input:focus {
+    border-color: #2f855a;
+    box-shadow: 0 0 0 3px #2f855a26;
+}
+.auth-field input::placeholder {
+    color: #9cb5a6;
+}
+.auth-avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 2px;
+}
+.auth-avatar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 6px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1.5px solid #d2e4d9;
+    cursor: pointer;
+    transition: all .18s ease;
+}
+.auth-avatar-item:hover {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+.auth-avatar-item.is-selected {
+    background: #ecfdf5;
+    border-color: #2f855a;
+    box-shadow: 0 0 0 2px #2f855a33;
+    transform: scale(1.03);
+}
+.auth-avatar-item .avatar-emoji {
+    font-size: 20px;
+    line-height: 1.2;
+}
+.auth-avatar-item .avatar-title {
+    font-size: 9px;
+    font-weight: 600;
+    color: #2c543f;
+}
+.auth-submit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #287349, #1b4f32);
+    color: #ffffff;
+    border: none;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    cursor: pointer;
+    box-shadow: 0 6px 18px #194e3036;
+    margin-top: 4px;
+    transition: filter .18s, transform .18s;
+}
+.auth-submit-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+.auth-submit-btn:active {
+    transform: scale(0.98);
+}
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #7b9c8b;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin: 2px 0;
+}
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #d9e9df;
+}
+.auth-divider span {
+    padding: 0 10px;
+}
+.auth-guest-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 10px;
+    border-radius: 13px;
+    background: #f1f8f3;
+    border: 1px solid #d3e7da;
+    color: #2b573f;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .18s;
+}
+.auth-guest-btn:hover {
+    background: #e2f2e6;
+}
+
 /* Ẩn các thanh điều khiển khi đang ở Trang Chủ */
 .explorer-ui.is-home .hud-header,
 .explorer-ui.is-home .flight-panel {
@@ -577,6 +966,9 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
     .home-play-btn .btn-text strong { font-size: 14px; }
     .home-biomes-grid { gap: 4px; }
     .home-biome-item { font-size: 9px; padding: 3px 7px; }
+    .pilot-profile-card { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .pilot-profile-actions { width: 100%; }
+    .pilot-main-btn { width: 100%; text-align: center; }
 }
 
 .webgl {

@@ -1,3 +1,4 @@
+import AuthManager, { DEFAULT_AVATARS } from '../auth/AuthManager.js'
 import FlightJoystick from './FlightJoystick.js'
 import TerrainMinimap from './TerrainMinimap.js'
 
@@ -14,6 +15,8 @@ const ICONS = {
   muted: '<path d="m11 4-6 5H2v6h3l6 5ZM16 9l6 6M16 15l6-6"/>',
   plane: '<path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>',
   restart: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
 }
 const BIOMES = {
   forest: 'Rừng xanh tươi', autumnForest: 'Rừng cây lá vàng', desert: 'Đồi cát vàng',
@@ -22,6 +25,12 @@ const BIOMES = {
 const svg = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`
 const button = (action, icon, label, extra = '') => `<button type="button" class="icon-button" data-action="${action}" title="${label}" aria-label="${label}" ${extra}>${svg(icon)}</button>`
 const CLOUD_REVEAL_MS = 750
+const renderAvatarChoices = (selected) => DEFAULT_AVATARS.map(av => `
+  <button type="button" class="auth-avatar-item ${av.emoji === selected ? 'is-selected' : ''}" data-action="select-avatar" data-avatar="${av.emoji}" title="${av.label}">
+    <span class="avatar-emoji">${av.emoji}</span>
+    <span class="avatar-title">${av.label}</span>
+  </button>
+`).join('')
 const CLOUD_PUFFS = [
   ['16%', '24%', '46vw', '26vw', '-38vw', '-22vh'],
   ['50%', '12%', '52vw', '24vw', '2vw', '-34vh'],
@@ -49,6 +58,8 @@ export default class ExplorerUI {
     this._hasStartedOnce = false
     this.mapExpanded = false
     this.lastUpdate = -Infinity
+    this.auth = new AuthManager()
+    this.selectedAvatar = DEFAULT_AVATARS[0].emoji
     this.events = new AbortController()
     root.className = 'explorer-ui'
     root.innerHTML = `
@@ -58,6 +69,10 @@ export default class ExplorerUI {
           <div><h1>Thế Giới Lego<span>BRICKLAND</span></h1><p>Chuyến phiêu lưu tí hon không hồi kết</p></div>
         </div>
         <div class="header-tools">
+          <div class="pilot-hud-badge hud-part" data-pilot-hud-badge>
+            <span class="pilot-emoji" data-hud-avatar>👨‍✈️</span>
+            <span class="pilot-name" data-hud-pilot-name>Khách</span>
+          </div>
           <span class="explore-badge hud-part"><i></i><span data-flight-status>Tự do khám phá</span></span>
         </div>
       </header>
@@ -113,6 +128,8 @@ export default class ExplorerUI {
             Lướt nhẹ trên đôi cánh máy bay tí hon qua những cánh rừng rực rỡ, dòng sông ngọc bích và đồi cát kỳ vĩ được ghép từ hàng vạn viên gạch lego.
           </p>
 
+          <div class="home-user-card" data-home-user-card></div>
+
           <div class="home-actions">
             <button type="button" class="home-play-btn" data-action="start-game">
               <span class="btn-icon">${svg('plane')}</span>
@@ -157,6 +174,70 @@ export default class ExplorerUI {
           </div>
         </div>
       </section>
+      <dialog class="auth-dialog surface" data-auth-dialog aria-labelledby="auth-dialog-title">
+        <button type="button" class="icon-button auth-close-btn" data-action="close-auth" title="Đóng" aria-label="Đóng">${svg('close')}</button>
+        <div class="auth-header">
+          <div class="auth-badge">
+            <span class="brick-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span>BRICKLAND PILOT ID</span>
+          </div>
+          <h2 id="auth-dialog-title">HỒ SƠ PHI CÔNG</h2>
+          <p>Đăng nhập hoặc đăng ký để lưu tiến trình bay và ghi danh trên bảng vàng</p>
+        </div>
+
+        <div class="auth-tabs" role="tablist">
+          <button type="button" class="auth-tab is-active" data-action="auth-tab" data-tab="login" role="tab" aria-selected="true">ĐĂNG NHẬP</button>
+          <button type="button" class="auth-tab" data-action="auth-tab" data-tab="register" role="tab" aria-selected="false">ĐĂNG KÝ MỚI</button>
+        </div>
+
+        <div class="auth-error-banner" data-auth-error hidden></div>
+
+        <!-- Form Đăng nhập -->
+        <form class="auth-form" data-auth-form="login">
+          <div class="auth-field">
+            <label for="login-username">Tên phi công hoặc Email</label>
+            <input type="text" id="login-username" name="username" required autocomplete="username" placeholder="Nhập tên phi công hoặc email...">
+          </div>
+          <div class="auth-field">
+            <label for="login-password">Mật khẩu</label>
+            <input type="password" id="login-password" name="password" required autocomplete="current-password" placeholder="Nhập mật khẩu...">
+          </div>
+          <button type="submit" class="auth-submit-btn">
+            <span>Đăng nhập bay ngay</span>
+            <span class="btn-arrow">→</span>
+          </button>
+          <div class="auth-divider"><span>HOẶC</span></div>
+          <button type="button" class="auth-guest-btn" data-action="guest-login">
+            <span>🚀 Chơi ngay với tư cách Khách</span>
+          </button>
+        </form>
+
+        <!-- Form Đăng ký -->
+        <form class="auth-form" data-auth-form="register" hidden>
+          <div class="auth-field">
+            <label for="reg-username">Tên phi công <span class="required">*</span></label>
+            <input type="text" id="reg-username" name="username" required minlength="2" maxlength="20" placeholder="Ví dụ: XuanHoa, CaptainLego...">
+          </div>
+          <div class="auth-field">
+            <label for="reg-email">Email <small>(không bắt buộc, để khôi phục)</small></label>
+            <input type="email" id="reg-email" name="email" placeholder="email@example.com">
+          </div>
+          <div class="auth-field">
+            <label for="reg-password">Mật khẩu <span class="required">*</span></label>
+            <input type="password" id="reg-password" name="password" required minlength="4" placeholder="Tối thiểu 4 ký tự...">
+          </div>
+          <div class="auth-field">
+            <label>Chọn hình đại diện</label>
+            <div class="auth-avatar-grid" data-avatar-grid>
+              ${renderAvatarChoices(this.selectedAvatar)}
+            </div>
+          </div>
+          <button type="submit" class="auth-submit-btn">
+            <span>Tạo tài khoản & Cất cánh</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </form>
+      </dialog>
       <dialog class="help-dialog surface" aria-labelledby="help-title">
         ${button('close-help', 'close', 'Đóng hướng dẫn')}
         <span class="eyebrow">CÙNG KHÁM PHÁ</span><h2 id="help-title">Để tò mò dẫn lối</h2><p class="help-intro">Điều khiển chiếc máy bay nhỏ của bạn lướt qua những cánh rừng, dòng sông và đồi núi.</p>
@@ -182,9 +263,12 @@ export default class ExplorerUI {
     this.biome = root.querySelector('[data-biome]')
     this.x = root.querySelector('[data-x]')
     this.z = root.querySelector('[data-z]')
-    this.dialog = root.querySelector('dialog')
+    this.dialog = root.querySelector('.help-dialog') || root.querySelector('dialog')
+    this.authDialog = root.querySelector('[data-auth-dialog]')
+    this.authErrorBanner = root.querySelector('[data-auth-error]')
     this.minimap = new TerrainMinimap(root.querySelector('.terrain-minimap'), experience)
     this.syncAudioControl()
+    this.syncUserBadge()
     root.querySelector('[data-seed]').textContent = `# ${experience.world.config.seed}`
     const options = { signal: this.events.signal }
     this.touchMedia = window.matchMedia('(pointer: coarse)')
@@ -200,9 +284,60 @@ export default class ExplorerUI {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this.joystick.reset()
     }, options)
-    root.addEventListener('click', event => this.onAction(event.target.closest('[data-action]')?.dataset.action), options)
+    root.addEventListener('click', (event) => {
+      const target = event.target.closest('[data-action]')
+      if (target) this.onAction(target.dataset.action, target)
+    }, options)
     window.addEventListener('keydown', event => this.onKeyDown(event), { ...options, capture: true })
     this.dialog.addEventListener('close', () => this.syncPause(), options)
+    if (this.authDialog) {
+      this.authDialog.addEventListener('close', () => this.syncPause(), options)
+    }
+
+    const loginForm = root.querySelector('[data-auth-form="login"]')
+    if (loginForm) {
+      loginForm.addEventListener('submit', (e) => {
+        e.preventDefault()
+        const fd = new FormData(loginForm)
+        const usernameOrEmail = fd.get('username')
+        const password = fd.get('password')
+        const res = this.auth.login({ usernameOrEmail, password })
+        if (!res.success) {
+          this.setAuthError(res.error)
+          return
+        }
+        this.closeAuthModal()
+        this.syncUserBadge()
+        this.toast(`Chào mừng phi công ${res.user.username} trở lại!`)
+        loginForm.reset()
+      }, options)
+    }
+
+    const regForm = root.querySelector('[data-auth-form="register"]')
+    if (regForm) {
+      regForm.addEventListener('submit', (e) => {
+        e.preventDefault()
+        const fd = new FormData(regForm)
+        const username = fd.get('username')
+        const email = fd.get('email')
+        const password = fd.get('password')
+        const res = this.auth.register({
+          username,
+          email,
+          password,
+          avatar: this.selectedAvatar,
+        })
+        if (!res.success) {
+          this.setAuthError(res.error)
+          return
+        }
+        this.closeAuthModal()
+        this.syncUserBadge()
+        this.toast(`Tạo tài khoản thành công! Xin chào ${res.user.username}!`)
+        regForm.reset()
+      }, options)
+    }
+
     document.addEventListener('fullscreenchange', () => {
       this.joystick.reset()
       const control = root.querySelector('[data-action="fullscreen"]')
@@ -264,8 +399,13 @@ export default class ExplorerUI {
       if (startLabel) startLabel.textContent = hasStarted ? 'Tiếp tục bay' : 'Bắt đầu khám phá'
       if (startSub) startSub.textContent = hasStarted ? 'Nhấn để tiếp tục chuyến bay hiện tại (Phím cách / Enter)' : 'Nhấn để cất cánh bay lượn (Phím cách / Enter)'
       if (resumeOnly) resumeOnly.hidden = !hasStarted
+      this.syncUserBadge()
     }
     else {
+      if (!this._hasStartedOnce) {
+        this.auth.recordFlightStart()
+        this.syncUserBadge()
+      }
       this._hasStartedOnce = true
     }
     this.syncPause()
@@ -281,7 +421,7 @@ export default class ExplorerUI {
   }
 
   syncPause() {
-    const paused = this.experience.platformPaused || this.flightPaused || this.dialog.open || this.isHomeScreen
+    const paused = this.experience.platformPaused || this.flightPaused || this.dialog.open || Boolean(this.authDialog?.open) || this.isHomeScreen
     const player = this.experience.world.playerAircraft
     this.joystick.reset()
     if (player && (this.ready || paused)) player.setPaused(paused)
@@ -295,7 +435,132 @@ export default class ExplorerUI {
     this.root.classList.toggle('is-paused', this.flightPaused)
   }
 
-  onAction(action) {
+  syncUserBadge() {
+    const user = this.auth.getCurrentUser()
+    const homeCard = this.root.querySelector('[data-home-user-card]')
+    const hudAvatar = this.root.querySelector('[data-hud-avatar]')
+    const hudName = this.root.querySelector('[data-hud-pilot-name]')
+
+    if (hudAvatar) hudAvatar.textContent = user?.avatar || '👨‍✈️'
+    if (hudName) hudName.textContent = user?.username || 'Khách'
+
+    if (!homeCard) return
+
+    if (user && !user.isGuest) {
+      const flights = user.stats?.totalFlights || 0
+      const biomes = user.stats?.biomesDiscovered?.length || 0
+      homeCard.innerHTML = `
+        <div class="pilot-profile-card">
+          <div class="pilot-profile-avatar">${user.avatar || '👨‍✈️'}</div>
+          <div class="pilot-profile-info">
+            <div class="pilot-profile-name-row">
+              <strong class="pilot-profile-name">${user.username}</strong>
+              <span class="pilot-profile-badge">Phi công chính thức</span>
+            </div>
+            <div class="pilot-profile-stats">
+              <span>Chuyến bay: <b>${flights}</b></span>
+              <span>·</span>
+              <span>Đã khám phá: <b>${biomes}/7</b> vùng đất</span>
+            </div>
+          </div>
+          <div class="pilot-profile-actions">
+            <button type="button" class="pilot-sub-btn" data-action="logout" title="Đăng xuất">${svg('logout')} <span>Đăng xuất</span></button>
+          </div>
+        </div>
+      `
+    }
+    else if (user && user.isGuest) {
+      const flights = user.stats?.totalFlights || 0
+      const biomes = user.stats?.biomesDiscovered?.length || 0
+      homeCard.innerHTML = `
+        <div class="pilot-profile-card is-guest">
+          <div class="pilot-profile-avatar">${user.avatar || '👨‍✈️'}</div>
+          <div class="pilot-profile-info">
+            <div class="pilot-profile-name-row">
+              <strong class="pilot-profile-name">${user.username}</strong>
+              <span class="pilot-profile-badge is-guest-tag">Khách phiêu lưu</span>
+            </div>
+            <div class="pilot-profile-stats">
+              <span>Chuyến bay: <b>${flights}</b></span>
+              <span>·</span>
+              <span>Đã khám phá: <b>${biomes}/7</b> vùng đất</span>
+            </div>
+          </div>
+          <div class="pilot-profile-actions">
+            <button type="button" class="pilot-main-btn" data-action="open-auth"><span>Đăng ký lưu dữ liệu</span></button>
+          </div>
+        </div>
+      `
+    }
+    else {
+      homeCard.innerHTML = `
+        <div class="pilot-profile-card is-unlogged">
+          <div class="pilot-profile-avatar">👤</div>
+          <div class="pilot-profile-info">
+            <div class="pilot-profile-name-row">
+              <strong class="pilot-profile-name">Chưa đăng nhập</strong>
+            </div>
+            <p class="pilot-profile-desc">Tạo tài khoản để lưu giữ thành tích chuyến bay và khám phá 7 miền đất Lego.</p>
+          </div>
+          <div class="pilot-profile-actions">
+            <button type="button" class="pilot-main-btn" data-action="open-auth"><span>Đăng nhập / Đăng ký</span></button>
+          </div>
+        </div>
+      `
+    }
+  }
+
+  openAuthModal(tab = 'login') {
+    if (!this.authDialog) return
+    this.switchAuthTab(tab)
+    this.clearAuthError()
+    this.authDialog.showModal()
+    this.syncPause()
+  }
+
+  closeAuthModal() {
+    if (!this.authDialog) return
+    this.authDialog.close()
+    this.clearAuthError()
+  }
+
+  switchAuthTab(tab) {
+    const isLogin = tab === 'login'
+    for (const tabBtn of this.authDialog.querySelectorAll('.auth-tab')) {
+      const active = tabBtn.dataset.tab === tab
+      tabBtn.classList.toggle('is-active', active)
+      tabBtn.setAttribute('aria-selected', String(active))
+    }
+    const loginForm = this.authDialog.querySelector('[data-auth-form="login"]')
+    const regForm = this.authDialog.querySelector('[data-auth-form="register"]')
+    if (loginForm) loginForm.hidden = !isLogin
+    if (regForm) regForm.hidden = isLogin
+    this.clearAuthError()
+  }
+
+  setAuthError(message) {
+    if (!this.authErrorBanner) return
+    this.authErrorBanner.textContent = message
+    this.authErrorBanner.hidden = false
+  }
+
+  clearAuthError() {
+    if (!this.authErrorBanner) return
+    this.authErrorBanner.textContent = ''
+    this.authErrorBanner.hidden = true
+  }
+
+  selectAvatar(emoji) {
+    if (!emoji) return
+    this.selectedAvatar = emoji
+    const grid = this.authDialog.querySelector('[data-avatar-grid]')
+    if (!grid) return
+    for (const item of grid.querySelectorAll('.auth-avatar-item')) {
+      item.classList.toggle('is-selected', item.dataset.avatar === emoji)
+    }
+  }
+
+  onAction(action, target) {
     if (!action) return
     const audio = this.experience.audio
     if (action === 'sound' && audio) {
@@ -322,6 +587,36 @@ export default class ExplorerUI {
       this.experience.worldCamera.resetView(player.state.position)
       this.setHomeScreen(false)
       this.toast('Đã trở về điểm xuất phát')
+      return
+    }
+    if (action === 'open-auth') {
+      this.openAuthModal('login')
+      return
+    }
+    if (action === 'close-auth') {
+      this.closeAuthModal()
+      return
+    }
+    if (action === 'auth-tab' && target) {
+      this.switchAuthTab(target.dataset.tab)
+      return
+    }
+    if (action === 'select-avatar' && target) {
+      const avatarBtn = target.closest('[data-avatar]')
+      if (avatarBtn) this.selectAvatar(avatarBtn.dataset.avatar)
+      return
+    }
+    if (action === 'guest-login') {
+      this.auth.playAsGuest()
+      this.syncUserBadge()
+      this.closeAuthModal()
+      this.toast('Bắt đầu chơi với tư cách Khách')
+      return
+    }
+    if (action === 'logout') {
+      this.auth.logout()
+      this.syncUserBadge()
+      this.toast('Đã đăng xuất tài khoản')
       return
     }
     audio?.play(action === 'pause' ? this.flightPaused ? 'resume' : 'pause' : 'click')
@@ -358,6 +653,15 @@ export default class ExplorerUI {
   onKeyDown(event) {
     if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return
     if (this.dialog.open) return
+
+    if (this.authDialog?.open) {
+      if (event.code === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        this.closeAuthModal()
+      }
+      return
+    }
 
     if (this.isHomeScreen) {
       if (event.code === 'Space' || event.code === 'Enter') {
@@ -410,7 +714,14 @@ export default class ExplorerUI {
     this.z.textContent = String(Math.floor(player.state.position.z / cellSize)).padStart(4, '0')
     this.minimap.update()
     const biomeId = this.minimap.getCurrentBiomeId()
-    if (biomeId && this.lastBiomeId && biomeId !== this.lastBiomeId) this.experience.audio?.play('biome')
+    if (biomeId && this.lastBiomeId && biomeId !== this.lastBiomeId) {
+      this.experience.audio?.play('biome')
+      const isNew = this.auth.recordBiome(biomeId)
+      if (isNew) {
+        this.syncUserBadge()
+        this.toast(`Khám phá vùng đất mới: ${BIOMES[biomeId] ?? biomeId}!`)
+      }
+    }
     if (biomeId) this.lastBiomeId = biomeId
     this.biome.textContent = BIOMES[biomeId] ?? 'Vùng hoang sơ'
   }
@@ -456,6 +767,7 @@ export default class ExplorerUI {
     this.joystick.reset()
     this.events.abort()
     clearTimeout(this.toastTimer)
+    if (this.authDialog?.open) this.authDialog.close()
     if (this.dialog.open) this.dialog.close()
     this.minimap.dispose()
     this.root.replaceChildren()

@@ -12,6 +12,8 @@ const ICONS = {
   close: '<path d="m6 6 12 12M6 18 18 6"/>',
   sound: '<path d="m11 4-6 5H2v6h3l6 5ZM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>',
   muted: '<path d="m11 4-6 5H2v6h3l6 5ZM16 9l6 6M16 15l6-6"/>',
+  plane: '<path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>',
+  restart: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
 }
 const BIOMES = {
   forest: 'Rừng xanh tươi', autumnForest: 'Rừng cây lá vàng', desert: 'Đồi cát vàng',
@@ -43,6 +45,8 @@ export default class ExplorerUI {
     this.experience = experience
     this.ready = false
     this.flightPaused = false
+    this.isHomeScreen = true
+    this._hasStartedOnce = false
     this.mapExpanded = false
     this.lastUpdate = -Infinity
     this.events = new AbortController()
@@ -94,6 +98,65 @@ export default class ExplorerUI {
       ${cloudVeilMarkup()}
       <div class="loading-card surface" role="status"><span class="eyebrow">THẾ GIỚI NHỎ, PHIÊU LƯU LỚN</span><h2>Vùng đất đang hình thành</h2><p data-stage>Đang đánh thức thế giới nhỏ này…</p><div class="loading-track"><i></i></div></div>
       <div class="hud-toast surface" role="status" hidden></div>
+      <section class="home-screen" data-home-screen aria-label="Trang chủ trò chơi">
+        <div class="home-backdrop"></div>
+        <div class="home-card surface">
+          <div class="home-badge">
+            <span class="brick-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span>THẾ GIỚI LEGO 3D · CHUYẾN PHIÊU LƯU TÍ HON</span>
+          </div>
+          <h1 class="home-title">
+            BRICKLAND
+            <span>KHÁM PHÁ VÙNG ĐẤT LEGO</span>
+          </h1>
+          <p class="home-description">
+            Lướt nhẹ trên đôi cánh máy bay tí hon qua những cánh rừng rực rỡ, dòng sông ngọc bích và đồi cát kỳ vĩ được ghép từ hàng vạn viên gạch lego.
+          </p>
+
+          <div class="home-actions">
+            <button type="button" class="home-play-btn" data-action="start-game">
+              <span class="btn-icon">${svg('plane')}</span>
+              <span class="btn-text">
+                <strong data-home-start-label>Bắt đầu khám phá</strong>
+                <small data-home-start-sub>Nhấn để cất cánh bay lượn (Phím cách / Enter)</small>
+              </span>
+              <span class="btn-arrow">→</span>
+            </button>
+
+            <div class="home-secondary-actions">
+              <button type="button" class="home-action-btn" data-action="help">
+                ${svg('help')} <span>Hướng dẫn điều khiển</span>
+              </button>
+              <button type="button" class="home-action-btn" data-action="sound">
+                ${svg('sound')} <span data-home-sound-text>Âm thanh & Nhạc</span>
+              </button>
+              <button type="button" class="home-action-btn" data-action="home-reset" data-home-resume-only hidden>
+                ${svg('restart')} <span>Bay lại từ đầu</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="home-biomes-section">
+            <div class="home-biomes-header">
+              <span>7 MIỀN ĐẤT SINH THÁI ĐẶC SẮC</span>
+              <span class="home-biomes-sub">Tự do khám phá không giới hạn</span>
+            </div>
+            <div class="home-biomes-grid">
+              <span class="home-biome-item">🌲 Rừng xanh tươi</span>
+              <span class="home-biome-item">🍂 Rừng thu vàng</span>
+              <span class="home-biome-item">🌸 Đồng cỏ hoa</span>
+              <span class="home-biome-item">🏜️ Đồi cát vàng</span>
+              <span class="home-biome-item">🌋 Thung lũng nham thạch</span>
+              <span class="home-biome-item">❄️ Rừng tuyết trắng</span>
+              <span class="home-biome-item">🌿 Đất ngập nước</span>
+            </div>
+          </div>
+
+          <div class="home-footer">
+            <span class="home-tip-text">💡 <b>Cách chơi:</b> Dùng phím <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> để lái theo trực quan màn hình · Nhấn <kbd>Esc</kbd> hoặc nút <b>⌂</b> bất cứ lúc nào để về Trang chủ</span>
+          </div>
+        </div>
+      </section>
       <dialog class="help-dialog surface" aria-labelledby="help-title">
         ${button('close-help', 'close', 'Đóng hướng dẫn')}
         <span class="eyebrow">CÙNG KHÁM PHÁ</span><h2 id="help-title">Để tò mò dẫn lối</h2><p class="help-intro">Điều khiển chiếc máy bay nhỏ của bạn lướt qua những cánh rừng, dòng sông và đồi núi.</p>
@@ -185,8 +248,27 @@ export default class ExplorerUI {
     if (!this.experience.world.playerAircraft?.enabled) {
       for (const control of this.root.querySelectorAll('[data-action="pause"], [data-action="home"]')) control.disabled = true
     }
-    this.syncPause()
+    this.setHomeScreen(true)
     this.update(0)
+  }
+
+  setHomeScreen(show) {
+    this.isHomeScreen = Boolean(show)
+    this.root.classList.toggle('is-home', this.isHomeScreen)
+    if (this.isHomeScreen) {
+      if (this.mapExpanded) this.toggleMap(false)
+      const hasStarted = this._hasStartedOnce
+      const startLabel = this.root.querySelector('[data-home-start-label]')
+      const startSub = this.root.querySelector('[data-home-start-sub]')
+      const resumeOnly = this.root.querySelector('[data-home-resume-only]')
+      if (startLabel) startLabel.textContent = hasStarted ? 'Tiếp tục bay' : 'Bắt đầu khám phá'
+      if (startSub) startSub.textContent = hasStarted ? 'Nhấn để tiếp tục chuyến bay hiện tại (Phím cách / Enter)' : 'Nhấn để cất cánh bay lượn (Phím cách / Enter)'
+      if (resumeOnly) resumeOnly.hidden = !hasStarted
+    }
+    else {
+      this._hasStartedOnce = true
+    }
+    this.syncPause()
   }
 
   syncTouchControls() {
@@ -195,11 +277,11 @@ export default class ExplorerUI {
     const available = touch && this.ready && player?.enabled === true
     this.root.classList.toggle('is-touch', touch)
     this.root.classList.toggle('has-flight-joystick', available)
-    this.joystick.setEnabled(available && !player.paused && !this.mapExpanded && !this.root.classList.contains('is-cinema'))
+    this.joystick.setEnabled(available && !player.paused && !this.mapExpanded && !this.root.classList.contains('is-cinema') && !this.isHomeScreen)
   }
 
   syncPause() {
-    const paused = this.experience.platformPaused || this.flightPaused || this.dialog.open
+    const paused = this.experience.platformPaused || this.flightPaused || this.dialog.open || this.isHomeScreen
     const player = this.experience.world.playerAircraft
     this.joystick.reset()
     if (player && (this.ready || paused)) player.setPaused(paused)
@@ -209,7 +291,7 @@ export default class ExplorerUI {
     control.setAttribute('aria-label', this.flightPaused ? 'Tiếp tục bay (Phím cách)' : 'Tạm dừng bay (Phím cách)')
     control.title = control.getAttribute('aria-label')
     control.innerHTML = svg(this.flightPaused ? 'play' : 'pause')
-    this.root.querySelector('[data-flight-status]').textContent = !player?.enabled ? 'Ngắm cảnh' : this.flightPaused ? 'Đã tạm dừng' : 'Tự do khám phá'
+    this.root.querySelector('[data-flight-status]').textContent = !player?.enabled ? 'Ngắm cảnh' : this.isHomeScreen ? 'Trang chủ' : this.flightPaused ? 'Đã tạm dừng' : 'Tự do khám phá'
     this.root.classList.toggle('is-paused', this.flightPaused)
   }
 
@@ -222,7 +304,27 @@ export default class ExplorerUI {
       if (!audio.muted) audio.play('click')
       return
     }
-    audio?.play(action === 'pause' ? this.flightPaused ? 'resume' : 'pause' : action === 'home' ? 'home' : 'click')
+    if (action === 'start-game') {
+      this.experience.audio?.play('resume')
+      this.setHomeScreen(false)
+      return
+    }
+    if (action === 'home') {
+      this.setHomeScreen(true)
+      this.experience.audio?.play('click')
+      return
+    }
+    if (action === 'home-reset') {
+      const player = this.experience.world.playerAircraft
+      this.joystick.reset()
+      player?.reset()
+      this.experience.world.regenerate()
+      this.experience.worldCamera.resetView(player.state.position)
+      this.setHomeScreen(false)
+      this.toast('Đã trở về điểm xuất phát')
+      return
+    }
+    audio?.play(action === 'pause' ? this.flightPaused ? 'resume' : 'pause' : 'click')
     if (action === 'cinema') {
       if (this.mapExpanded) this.toggleMap(false)
       const hidden = this.root.classList.toggle('is-cinema')
@@ -251,26 +353,41 @@ export default class ExplorerUI {
       this.flightPaused = !this.flightPaused
       this.syncPause()
     }
-    if (action === 'home') {
-      this.joystick.reset()
-      player.reset()
-      this.experience.world.regenerate()
-      this.experience.worldCamera.resetView(player.state.position)
-      this.toast('Đã trở về điểm xuất phát')
-    }
   }
 
   onKeyDown(event) {
-    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest('input, textarea, select, [contenteditable="true"]')) return
+    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return
     if (this.dialog.open) return
-    if (event.code === 'Escape' && this.mapExpanded) {
-      event.preventDefault()
-      event.stopPropagation()
-      this.toggleMap(false)
-      this.experience.audio?.play('click')
+
+    if (this.isHomeScreen) {
+      if (event.code === 'Space' || event.code === 'Enter') {
+        event.preventDefault()
+        event.stopPropagation()
+        this.onAction('start-game')
+        return
+      }
+      if (event.code === 'Escape' && this._hasStartedOnce) {
+        event.preventDefault()
+        event.stopPropagation()
+        this.setHomeScreen(false)
+        return
+      }
       return
     }
-    const interactive = event.target.closest('button, a')
+
+    if (event.code === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      if (this.mapExpanded) {
+        this.toggleMap(false)
+        this.experience.audio?.play('click')
+      }
+      else {
+        this.setHomeScreen(true)
+      }
+      return
+    }
+    const interactive = event.target?.closest?.('button, a')
     const action = event.code === 'KeyH' ? 'cinema' : event.code === 'KeyM' ? 'sound' : event.code === 'Space' && !interactive ? 'pause' : event.key === '?' ? 'help' : null
     if (action) {
       event.preventDefault()
@@ -301,10 +418,16 @@ export default class ExplorerUI {
   syncAudioControl() {
     const muted = this.experience.audio?.muted ?? true
     const control = this.root.querySelector('[data-action="sound"]')
-    control.setAttribute('aria-pressed', String(muted))
-    control.setAttribute('aria-label', muted ? 'Bật âm thanh (M)' : 'Tắt âm thanh (M)')
-    control.title = control.getAttribute('aria-label')
-    control.innerHTML = svg(muted ? 'muted' : 'sound')
+    if (control) {
+      control.setAttribute('aria-pressed', String(muted))
+      control.setAttribute('aria-label', muted ? 'Bật âm thanh (M)' : 'Tắt âm thanh (M)')
+      control.title = control.getAttribute('aria-label')
+      control.innerHTML = svg(muted ? 'muted' : 'sound')
+    }
+    const homeSoundText = this.root.querySelector('[data-home-sound-text]')
+    if (homeSoundText) {
+      homeSoundText.textContent = muted ? 'Bật âm thanh' : 'Tắt âm thanh'
+    }
   }
 
   toggleMap(expanded = !this.mapExpanded) {

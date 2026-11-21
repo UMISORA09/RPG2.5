@@ -44,7 +44,7 @@ button svg { width: 20px; height: 20px; }
 .brick-mark { display: grid; grid-template-columns: repeat(2, 9px); gap: 5px; padding: 9px 10px 12px; background: linear-gradient(145deg, #ffe6a0e6, #f2c966b8); border: 1px solid #fff5c780; border-radius: 13px; box-shadow: inset 0 1px 0 #fffbdab3, inset 0 -3px 0 #bca24f66, 0 4px 18px #1d432929; transform: rotate(-7deg); }
 .brick-mark i { width: 9px; height: 9px; background: #ffe798b8; border-radius: 50%; box-shadow: 0 2px 0 #c6a74780, inset 0 1px 0 #fff7d8; }
 .header-tools { display: flex; gap: 14px; align-items: center; }
-.explore-badge { display: flex; gap: 8px; align-items: center; padding: 12px 17px; background: #214d3c64; color: #f8fcf5; border: 1px solid #ffffff52; box-shadow: inset 0 1px 0 #ffffff38, 0 5px 18px #163b2421; backdrop-filter: blur(24px) saturate(155%); -webkit-backdrop-filter: blur(24px) saturate(155%); border-radius: 30px; font-size: 11px; letter-spacing: 1px; }
+.explore-badge, [data-action="pause"] { display: none !important; pointer-events: none !important; }
 .explore-badge i, .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #d8efbd; box-shadow: 0 0 0 3px #bed69726; }
 .action-bar { display: flex; padding: 6px; gap: 4px; align-items: center; pointer-events: auto; border-radius: 30px; }
 .icon-button { width: 40px; height: 40px; border: 1px solid transparent; background: transparent; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; transition: background .18s, box-shadow .18s, transform .18s; }

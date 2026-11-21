@@ -73,7 +73,6 @@ export default class ExplorerUI {
             <span class="pilot-emoji" data-hud-avatar>👨‍✈️</span>
             <span class="pilot-name" data-hud-pilot-name>Khách</span>
           </div>
-          <span class="explore-badge hud-part"><i></i><span data-flight-status>Tự do khám phá</span></span>
         </div>
       </header>
       <section class="surface location-card hud-part flight-panel" aria-label="Thông tin chuyến bay">
@@ -94,7 +93,6 @@ export default class ExplorerUI {
           <div class="map-footer"><span><i></i> Vị trí của bạn</span><span data-seed></span></div>
         </aside>
         <nav class="surface action-bar" aria-label="Công cụ khám phá">
-          ${button('pause', 'pause', 'Tạm dừng bay (Phím cách)', 'aria-pressed="false" disabled')}
           ${button('home', 'home', 'Về điểm xuất phát', 'disabled')}
           <span class="tool-divider"></span>
           ${button('sound', 'sound', 'Tắt âm thanh (M)', 'aria-pressed="false"')}
@@ -271,7 +269,6 @@ export default class ExplorerUI {
           <div><dt><kbd>S</kbd> / <kbd>↓</kbd></dt><dd>Bay xuống (về gần màn hình)</dd></div>
           <div><dt><kbd>A</kbd> / <kbd>←</kbd></dt><dd>Bay sang trái màn hình</dd></div>
           <div><dt><kbd>D</kbd> / <kbd>→</kbd></dt><dd>Bay sang phải màn hình</dd></div>
-          <div><dt><kbd>Space</kbd></dt><dd>Tạm dừng / Tiếp tục bay</dd></div>
           <div><dt><kbd>H</kbd> / <kbd>M</kbd></dt><dd>Ẩn hiện giao diện / Bật tắt âm thanh</dd></div>
           <div><dt>Nút góc bản đồ / <kbd>Esc</kbd></dt><dd>Phóng to / Thu nhỏ bản đồ</dd></div>
         </dl>
@@ -474,11 +471,16 @@ export default class ExplorerUI {
     if (player && (this.ready || paused)) player.setPaused(paused)
     this.syncTouchControls()
     const control = this.root.querySelector('[data-action="pause"]')
-    control.setAttribute('aria-pressed', String(this.flightPaused))
-    control.setAttribute('aria-label', this.flightPaused ? 'Tiếp tục bay (Phím cách)' : 'Tạm dừng bay (Phím cách)')
-    control.title = control.getAttribute('aria-label')
-    control.innerHTML = svg(this.flightPaused ? 'play' : 'pause')
-    this.root.querySelector('[data-flight-status]').textContent = !player?.enabled ? 'Ngắm cảnh' : this.isHomeScreen ? 'Trang chủ' : this.flightPaused ? 'Đã tạm dừng' : 'Tự do khám phá'
+    if (control) {
+      control.setAttribute('aria-pressed', String(this.flightPaused))
+      control.setAttribute('aria-label', this.flightPaused ? 'Tiếp tục bay (Phím cách)' : 'Tạm dừng bay (Phím cách)')
+      control.title = control.getAttribute('aria-label')
+      control.innerHTML = svg(this.flightPaused ? 'play' : 'pause')
+    }
+    const statusEl = this.root.querySelector('[data-flight-status]')
+    if (statusEl) {
+      statusEl.textContent = !player?.enabled ? 'Ngắm cảnh' : this.isHomeScreen ? 'Trang chủ' : this.flightPaused ? 'Đã tạm dừng' : 'Tự do khám phá'
+    }
     this.root.classList.toggle('is-paused', this.flightPaused)
   }
 
@@ -704,7 +706,10 @@ export default class ExplorerUI {
       this.toast('Đã đăng xuất tài khoản thành công')
       return
     }
-    audio?.play(action === 'pause' ? this.flightPaused ? 'resume' : 'pause' : 'click')
+    if (action === 'pause') {
+      return
+    }
+    audio?.play('click')
     if (action === 'cinema') {
       if (this.mapExpanded) this.toggleMap(false)
       const hidden = this.root.classList.toggle('is-cinema')
@@ -729,10 +734,6 @@ export default class ExplorerUI {
     if (action === 'close-help') this.dialog.close()
     const player = this.experience.world.playerAircraft
     if (!player?.enabled) return
-    if (action === 'pause') {
-      this.flightPaused = !this.flightPaused
-      this.syncPause()
-    }
   }
 
   onKeyDown(event) {
@@ -776,8 +777,7 @@ export default class ExplorerUI {
       }
       return
     }
-    const interactive = event.target?.closest?.('button, a')
-    const action = event.code === 'KeyH' ? 'cinema' : event.code === 'KeyM' ? 'sound' : event.code === 'Space' && !interactive ? 'pause' : event.key === '?' ? 'help' : null
+    const action = event.code === 'KeyH' ? 'cinema' : event.code === 'KeyM' ? 'sound' : event.key === '?' ? 'help' : null
     if (action) {
       event.preventDefault()
       event.stopPropagation()

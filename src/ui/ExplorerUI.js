@@ -439,6 +439,7 @@ export default class ExplorerUI {
       if (startSub) startSub.textContent = hasStarted ? 'Nhấn để tiếp tục chuyến bay hiện tại (Phím cách / Enter)' : 'Nhấn để cất cánh bay lượn (Phím cách / Enter)'
       if (resumeOnly) resumeOnly.hidden = !hasStarted
       this.syncUserBadge()
+      window.__bricklandApp?.openHome?.()
     }
     else {
       if (!this._hasStartedOnce) {
@@ -451,6 +452,8 @@ export default class ExplorerUI {
         this.syncUserBadge()
       }
       this._hasStartedOnce = true
+      window.__bricklandApp?.hidePages?.()
+      window.__bricklandApp?.setStartedOnce?.(true)
     }
     this.syncPause()
   }
@@ -487,6 +490,7 @@ export default class ExplorerUI {
 
     if (hudAvatar) hudAvatar.textContent = user?.avatar || '👨‍✈️'
     if (hudName) hudName.textContent = user?.username || 'Khách'
+    window.__bricklandApp?.syncUser?.()
 
     if (!homeCard) return
 

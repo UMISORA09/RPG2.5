@@ -1060,6 +1060,12 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
     .pilot-main-btn { width: 100%; text-align: center; }
 }
 
+/* Ẩn giao diện DOM tĩnh cũ để trang React JSX/TSX độc lập hoạt động với hiệu ứng chuyển động & ánh sáng */
+.explorer-ui .home-screen,
+.explorer-ui .auth-dialog {
+    display: none !important;
+}
+
 .webgl {
     display: block;
     width: 100%;

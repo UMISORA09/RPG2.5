@@ -11,6 +11,7 @@ import WorldCamera from '../world/camera.js'
 import Environment from '../world/environment.js'
 import World from '../world/world.js'
 import { worldConfig } from '../world/WorldConfig.js'
+import { mountPages } from '../pages/mountPages.jsx'
 
 export default class Experience {
   /**
@@ -39,6 +40,7 @@ export default class Experience {
     this.audio = new ExplorerAudio(this)
     const uiRoot = document.getElementById('explorer-ui')
     this.ui = uiRoot ? new ExplorerUI(uiRoot, this) : null
+    this.reactPages = (typeof document !== 'undefined' && this.ui) ? mountPages(this, this.ui) : null
 
     /** @type {(() => void) | null} */
     this._unsubscribeResize = null
@@ -298,6 +300,7 @@ export default class Experience {
     this._unsubscribeResize = null
 
     this.ui?.dispose()
+    this.reactPages?.unmount?.()
     this.audio?.dispose()
     this.world.dispose()
     this.environment.dispose()

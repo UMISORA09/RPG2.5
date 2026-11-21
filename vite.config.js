@@ -1,4 +1,7 @@
+import react from '@vitejs/plugin-react'
+
 export default {
+  plugins: [react()],
   root: 'src/', // Sources files (typically where index.html is)
   publicDir: '../public/', // Path from "root" to static assets (files that are served as they are)
   server:
@@ -11,14 +14,4 @@ export default {
       emptyOutDir: true, // Empty the folder first
       sourcemap: true, // Add sourcemap
     },
-  // resolve:
-  // {
-  //     alias:
-  //     {
-  //         'three/examples/jsm': 'three/examples/jsm',
-  //         'three/addons': 'three/examples/jsm',
-  //         'three/tsl': 'three/webgpu',
-  //         'three': 'three/webgpu',
-  //     }
-  // }
 }

@@ -194,13 +194,20 @@ export default class ExplorerUI {
 
         <!-- Form Đăng nhập -->
         <form class="auth-form" data-auth-form="login">
+          <div class="auth-demo-hint">
+            <span>💡 Tài khoản mẫu: <b>XuanHoa</b> (MK: <b>pass1234</b>)</span>
+            <button type="button" class="demo-fill-btn" data-action="fill-demo">Điền mẫu</button>
+          </div>
           <div class="auth-field">
             <label for="login-username">Tên phi công hoặc Email</label>
             <input type="text" id="login-username" name="username" required autocomplete="username" placeholder="Nhập tên phi công hoặc email...">
           </div>
           <div class="auth-field">
             <label for="login-password">Mật khẩu</label>
-            <input type="password" id="login-password" name="password" required autocomplete="current-password" placeholder="Nhập mật khẩu...">
+            <div class="auth-input-wrapper">
+              <input type="password" id="login-password" name="password" required autocomplete="current-password" placeholder="Nhập mật khẩu...">
+              <button type="button" class="pwd-toggle-btn" data-action="toggle-pwd" title="Hiện/ẩn mật khẩu">👁️</button>
+            </div>
           </div>
           <button type="submit" class="auth-submit-btn">
             <span>Đăng nhập bay ngay</span>
@@ -210,6 +217,10 @@ export default class ExplorerUI {
           <button type="button" class="auth-guest-btn" data-action="guest-login">
             <span>🚀 Chơi ngay với tư cách Khách</span>
           </button>
+          <p class="auth-switch-text">
+            Chưa có tài khoản?
+            <button type="button" class="auth-link-btn" data-action="auth-tab" data-tab="register">Đăng ký mới tại đây</button>
+          </p>
         </form>
 
         <!-- Form Đăng ký -->
@@ -224,7 +235,17 @@ export default class ExplorerUI {
           </div>
           <div class="auth-field">
             <label for="reg-password">Mật khẩu <span class="required">*</span></label>
-            <input type="password" id="reg-password" name="password" required minlength="4" placeholder="Tối thiểu 4 ký tự...">
+            <div class="auth-input-wrapper">
+              <input type="password" id="reg-password" name="password" required minlength="4" placeholder="Tối thiểu 4 ký tự...">
+              <button type="button" class="pwd-toggle-btn" data-action="toggle-pwd" title="Hiện/ẩn mật khẩu">👁️</button>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="reg-confirm-password">Xác nhận mật khẩu <span class="required">*</span></label>
+            <div class="auth-input-wrapper">
+              <input type="password" id="reg-confirm-password" name="confirmPassword" required minlength="4" placeholder="Nhập lại mật khẩu để xác nhận...">
+              <button type="button" class="pwd-toggle-btn" data-action="toggle-pwd" title="Hiện/ẩn mật khẩu">👁️</button>
+            </div>
           </div>
           <div class="auth-field">
             <label>Chọn hình đại diện</label>
@@ -236,6 +257,10 @@ export default class ExplorerUI {
             <span>Tạo tài khoản & Cất cánh</span>
             <span class="btn-arrow">→</span>
           </button>
+          <p class="auth-switch-text">
+            Đã có tài khoản?
+            <button type="button" class="auth-link-btn" data-action="auth-tab" data-tab="login">Đăng nhập tại đây</button>
+          </p>
         </form>
       </dialog>
       <dialog class="help-dialog surface" aria-labelledby="help-title">
@@ -291,6 +316,11 @@ export default class ExplorerUI {
     window.addEventListener('keydown', event => this.onKeyDown(event), { ...options, capture: true })
     this.dialog.addEventListener('close', () => this.syncPause(), options)
     if (this.authDialog) {
+      this.authDialog.addEventListener('click', (event) => {
+        if (event.target === this.authDialog) {
+          this.closeAuthModal()
+        }
+      }, options)
       this.authDialog.addEventListener('close', () => this.syncPause(), options)
     }
 
@@ -307,8 +337,10 @@ export default class ExplorerUI {
           return
         }
         this.closeAuthModal()
+        this._hasStartedOnce = false
         this.syncUserBadge()
-        this.toast(`Chào mừng phi công ${res.user.username} trở lại!`)
+        this.setHomeScreen(false)
+        this.toast(`Chào mừng phi công ${res.user.username} đã cất cánh!`)
         loginForm.reset()
       }, options)
     }
@@ -321,6 +353,11 @@ export default class ExplorerUI {
         const username = fd.get('username')
         const email = fd.get('email')
         const password = fd.get('password')
+        const confirmPassword = fd.get('confirmPassword')
+        if (password !== confirmPassword) {
+          this.setAuthError('Mật khẩu xác nhận không khớp!')
+          return
+        }
         const res = this.auth.register({
           username,
           email,
@@ -332,8 +369,10 @@ export default class ExplorerUI {
           return
         }
         this.closeAuthModal()
+        this._hasStartedOnce = false
         this.syncUserBadge()
-        this.toast(`Tạo tài khoản thành công! Xin chào ${res.user.username}!`)
+        this.setHomeScreen(false)
+        this.toast(`Tạo tài khoản thành công! Chúc phi công ${res.user.username} bay vui vẻ!`)
         regForm.reset()
       }, options)
     }
@@ -404,6 +443,11 @@ export default class ExplorerUI {
     else {
       if (!this._hasStartedOnce) {
         this.auth.recordFlightStart()
+        const currentBiome = this.minimap?.getCurrentBiomeId()
+        if (currentBiome) {
+          this.auth.recordBiome(currentBiome)
+          this.lastBiomeId = currentBiome
+        }
         this.syncUserBadge()
       }
       this._hasStartedOnce = true
@@ -449,13 +493,15 @@ export default class ExplorerUI {
     if (user && !user.isGuest) {
       const flights = user.stats?.totalFlights || 0
       const biomes = user.stats?.biomesDiscovered?.length || 0
+      const rank = flights >= 10 ? 'Cơ trưởng Vàng 🌟' : flights >= 3 ? 'Phi công Bạc ⭐' : 'Phi công Tập sự'
       homeCard.innerHTML = `
         <div class="pilot-profile-card">
           <div class="pilot-profile-avatar">${user.avatar || '👨‍✈️'}</div>
           <div class="pilot-profile-info">
             <div class="pilot-profile-name-row">
               <strong class="pilot-profile-name">${user.username}</strong>
-              <span class="pilot-profile-badge">Phi công chính thức</span>
+              <span class="pilot-profile-badge">Chính thức</span>
+              <span class="pilot-profile-rank">${rank}</span>
             </div>
             <div class="pilot-profile-stats">
               <span>Chuyến bay: <b>${flights}</b></span>
@@ -464,7 +510,8 @@ export default class ExplorerUI {
             </div>
           </div>
           <div class="pilot-profile-actions">
-            <button type="button" class="pilot-sub-btn" data-action="logout" title="Đăng xuất">${svg('logout')} <span>Đăng xuất</span></button>
+            <button type="button" class="pilot-sub-btn" data-action="open-auth" title="Đổi tài khoản khác"><span>Đổi nick</span></button>
+            <button type="button" class="pilot-sub-btn is-danger" data-action="logout" title="Đăng xuất">${svg('logout')} <span>Thoát</span></button>
           </div>
         </div>
       `
@@ -474,7 +521,7 @@ export default class ExplorerUI {
       const biomes = user.stats?.biomesDiscovered?.length || 0
       homeCard.innerHTML = `
         <div class="pilot-profile-card is-guest">
-          <div class="pilot-profile-avatar">${user.avatar || '👨‍✈️'}</div>
+          <div class="pilot-profile-avatar">🧭</div>
           <div class="pilot-profile-info">
             <div class="pilot-profile-name-row">
               <strong class="pilot-profile-name">${user.username}</strong>
@@ -483,11 +530,12 @@ export default class ExplorerUI {
             <div class="pilot-profile-stats">
               <span>Chuyến bay: <b>${flights}</b></span>
               <span>·</span>
-              <span>Đã khám phá: <b>${biomes}/7</b> vùng đất</span>
+              <span>Đã khám phá: <b>${biomes}/7</b> vùng đất (Tạm thời)</span>
             </div>
           </div>
           <div class="pilot-profile-actions">
-            <button type="button" class="pilot-main-btn" data-action="open-auth"><span>Đăng ký lưu dữ liệu</span></button>
+            <button type="button" class="pilot-main-btn" data-action="open-register"><span>Đăng ký lưu</span></button>
+            <button type="button" class="pilot-sub-btn" data-action="open-auth"><span>Đăng nhập</span></button>
           </div>
         </div>
       `
@@ -500,10 +548,12 @@ export default class ExplorerUI {
             <div class="pilot-profile-name-row">
               <strong class="pilot-profile-name">Chưa đăng nhập</strong>
             </div>
-            <p class="pilot-profile-desc">Tạo tài khoản để lưu giữ thành tích chuyến bay và khám phá 7 miền đất Lego.</p>
+            <p class="pilot-profile-desc">Vui lòng đăng nhập hoặc chọn chế độ Khách để cất cánh bay vào thế giới LEGO.</p>
           </div>
           <div class="pilot-profile-actions">
-            <button type="button" class="pilot-main-btn" data-action="open-auth"><span>Đăng nhập / Đăng ký</span></button>
+            <button type="button" class="pilot-main-btn" data-action="open-auth"><span>Đăng nhập</span></button>
+            <button type="button" class="pilot-main-btn is-alt" data-action="open-register"><span>Đăng ký</span></button>
+            <button type="button" class="pilot-sub-btn" data-action="guest-login"><span>Khách</span></button>
           </div>
         </div>
       `
@@ -570,6 +620,12 @@ export default class ExplorerUI {
       return
     }
     if (action === 'start-game') {
+      const user = this.auth.getCurrentUser()
+      if (!user) {
+        this.openAuthModal('login')
+        this.toast('Vui lòng đăng nhập hoặc chọn Khách để tham gia trò chơi!')
+        return
+      }
       this.experience.audio?.play('resume')
       this.setHomeScreen(false)
       return
@@ -593,12 +649,34 @@ export default class ExplorerUI {
       this.openAuthModal('login')
       return
     }
+    if (action === 'open-register') {
+      this.openAuthModal('register')
+      return
+    }
     if (action === 'close-auth') {
       this.closeAuthModal()
       return
     }
     if (action === 'auth-tab' && target) {
       this.switchAuthTab(target.dataset.tab)
+      return
+    }
+    if (action === 'fill-demo') {
+      const loginUser = this.root.querySelector('#login-username')
+      const loginPass = this.root.querySelector('#login-password')
+      if (loginUser) loginUser.value = 'XuanHoa'
+      if (loginPass) loginPass.value = 'pass1234'
+      this.toast('Đã điền tài khoản mẫu XuanHoa!')
+      return
+    }
+    if (action === 'toggle-pwd' && target) {
+      const wrapper = target.closest('.auth-input-wrapper')
+      const input = wrapper?.querySelector('input')
+      if (input) {
+        const isPwd = input.type === 'password'
+        input.type = isPwd ? 'text' : 'password'
+        target.textContent = isPwd ? '🙈' : '👁️'
+      }
       return
     }
     if (action === 'select-avatar' && target) {
@@ -610,13 +688,16 @@ export default class ExplorerUI {
       this.auth.playAsGuest()
       this.syncUserBadge()
       this.closeAuthModal()
-      this.toast('Bắt đầu chơi với tư cách Khách')
+      this._hasStartedOnce = false
+      this.setHomeScreen(false)
+      this.toast('Cất cánh với tư cách Khách khám phá!')
       return
     }
     if (action === 'logout') {
       this.auth.logout()
+      this._hasStartedOnce = false
       this.syncUserBadge()
-      this.toast('Đã đăng xuất tài khoản')
+      this.toast('Đã đăng xuất tài khoản thành công')
       return
     }
     audio?.play(action === 'pause' ? this.flightPaused ? 'resume' : 'pause' : 'click')

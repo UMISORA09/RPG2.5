@@ -169,20 +169,22 @@ export default class AuthManager {
 
   recordFlightStart() {
     const user = this.getCurrentUser()
-    if (!user || user.isGuest) return
+    if (!user || user.isGuest) return 0
     const accounts = this.getAccounts()
     const account = accounts.find(a => a.id === user.id)
     if (account) {
       account.stats.totalFlights = (account.stats.totalFlights || 0) + 1
       this.storage.setItem(STORAGE_ACCOUNTS_KEY, JSON.stringify(accounts))
       this.storage.setItem(STORAGE_USER_KEY, JSON.stringify(this._sanitizeUser(account)))
+      return account.stats.totalFlights
     }
+    return 0
   }
 
   recordBiome(biomeId) {
-    if (!biomeId) return
+    if (!biomeId) return false
     const user = this.getCurrentUser()
-    if (!user || user.isGuest) return
+    if (!user || user.isGuest) return false
     const accounts = this.getAccounts()
     const account = accounts.find(a => a.id === user.id)
     if (account) {
@@ -191,8 +193,10 @@ export default class AuthManager {
         account.stats.biomesDiscovered.push(biomeId)
         this.storage.setItem(STORAGE_ACCOUNTS_KEY, JSON.stringify(accounts))
         this.storage.setItem(STORAGE_USER_KEY, JSON.stringify(this._sanitizeUser(account)))
+        return true
       }
     }
+    return false
   }
 
   _sanitizeUser(account) {

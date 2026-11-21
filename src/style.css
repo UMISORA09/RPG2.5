@@ -645,6 +645,15 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .pilot-profile-badge.is-guest-tag {
     background: #d97706;
 }
+.pilot-profile-rank {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #eef8f2;
+    border: 1px solid #cce5d6;
+    color: #245839;
+}
 .pilot-profile-stats {
     display: flex;
     align-items: center;
@@ -682,6 +691,10 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
     filter: brightness(1.1);
     transform: translateY(-1px);
 }
+.pilot-main-btn.is-alt {
+    background: linear-gradient(135deg, #2b6cb0, #1a4971);
+    box-shadow: 0 4px 12px #1e3a5f33;
+}
 .pilot-sub-btn {
     display: flex;
     align-items: center;
@@ -690,7 +703,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
     border-radius: 12px;
     background: #ffffff8c;
     border: 1px solid #ffffffbf;
-    color: #a82e2e;
+    color: #244b37;
     font-size: 10px;
     font-weight: 600;
     cursor: pointer;
@@ -701,6 +714,12 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
     height: 13px;
 }
 .pilot-sub-btn:hover {
+    background: #e2f2e6;
+}
+.pilot-sub-btn.is-danger {
+    color: #b91c1c;
+}
+.pilot-sub-btn.is-danger:hover {
     background: #fee2e2;
 }
 
@@ -825,6 +844,76 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
     font-size: 9px;
     font-weight: 400;
     color: #698c79;
+}
+.auth-demo-hint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 11px;
+    border-radius: 10px;
+    background: #f0fdf4;
+    border: 1px dashed #86efac;
+    font-size: 10.5px;
+    color: #166534;
+}
+.demo-fill-btn {
+    padding: 3px 8px;
+    border-radius: 7px;
+    background: #166534;
+    color: #ffffff;
+    font-size: 9.5px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background .18s;
+}
+.demo-fill-btn:hover {
+    background: #14532d;
+}
+.auth-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+.auth-input-wrapper input {
+    padding-right: 38px !important;
+}
+.pwd-toggle-btn {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 8px;
+    transition: background .15s;
+    line-height: 1;
+}
+.pwd-toggle-btn:hover {
+    background: #e8f5ec;
+}
+.auth-switch-text {
+    font-size: 11px;
+    color: #557766;
+    text-align: center;
+    margin: 4px 0 0;
+}
+.auth-link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #1e663e;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: inherit;
+}
+.auth-link-btn:hover {
+    color: #14492b;
 }
 .auth-field input {
     width: 100%;

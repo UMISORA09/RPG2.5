@@ -82,10 +82,10 @@ test('tracks flights and biomes for registered user', () => {
   const auth = new AuthManager(storage)
 
   auth.register({ username: 'Explorer', password: 'password' })
-  auth.recordFlightStart()
-  auth.recordBiome('forest')
-  auth.recordBiome('desert')
-  auth.recordBiome('forest') // Duplicate should not add
+  assert.equal(auth.recordFlightStart(), 1)
+  assert.equal(auth.recordBiome('forest'), true)
+  assert.equal(auth.recordBiome('desert'), true)
+  assert.equal(auth.recordBiome('forest'), false) // Duplicate should not add
 
   const user = auth.getCurrentUser()
   assert.equal(user.stats.totalFlights, 1)

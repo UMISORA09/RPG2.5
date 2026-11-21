@@ -9,6 +9,49 @@ export function normalizeAngle(angle) {
   return a - Math.PI
 }
 
+export const BOT_TYPE_DEFS = {
+  easy: {
+    type: 'easy',
+    name: 'Bot Dễ (Đỏ)',
+    color: 'red',
+    maxHealth: 40,
+    speedMultiplier: 0.88,
+    turnSpeedMultiplier: 0.65,
+    fireCooldown: 1.8,
+  },
+  normal: {
+    type: 'normal',
+    name: 'Bot Thường (Cam)',
+    color: 'orange',
+    maxHealth: 50,
+    speedMultiplier: 1.0,
+    turnSpeedMultiplier: 1.0,
+    fireCooldown: 1.2,
+  },
+  hard: {
+    type: 'hard',
+    name: 'Bot Khó (Tím)',
+    color: 'purple',
+    maxHealth: 70,
+    speedMultiplier: 1.2, // Nhanh hơn 20%
+    turnSpeedMultiplier: 1.35,
+    fireCooldown: 1.0,
+  },
+}
+
+export function calculateDifficulty(kills = 0) {
+  const tier = Math.floor(Math.max(0, kills) / 5)
+  const speedBonus = Math.min(30, tier * 5) // +5% mỗi 5 kill, tối đa +30%
+  const multiplier = 1 + speedBonus / 100
+  const level = 1 + tier
+  return {
+    level,
+    tier,
+    speedBonus,
+    multiplier,
+  }
+}
+
 export function normalizeDogfightConfig(config = {}) {
   return {
     enabled: config.enabled ?? true,
@@ -39,25 +82,35 @@ export function createDogfightState(options = {}, userConfig = {}) {
   const playerPos = options.playerPosition ?? { x: 0, y: 5.5, z: 0 }
   const playerYaw = options.playerYaw ?? 0
 
-  const botColors = ['red', 'orange', 'purple']
+  const botTypeKeys = ['easy', 'normal', 'hard']
   const bots = []
   for (let i = 0; i < config.botCount; i++) {
+    const typeKey = botTypeKeys[i % botTypeKeys.length]
+    const def = BOT_TYPE_DEFS[typeKey]
     const angle = (i * 2 * Math.PI) / config.botCount + Math.PI / 6
     const dist = 14 + (i % 2) * 2
+
     bots.push({
       id: `bot_${i + 1}`,
-      name: `Bot ${i === 0 ? 'Đỏ' : i === 1 ? 'Cam' : 'Tím'}`,
-      color: botColors[i % botColors.length],
+      type: def.type,
+      name: def.name,
+      color: def.color,
       x: playerPos.x + Math.cos(angle) * dist,
       y: playerPos.y ?? 5.5,
       z: playerPos.z + Math.sin(angle) * dist,
       yaw: angle + Math.PI,
-      speed: config.botSpeed,
-      health: config.botMaxHealth,
-      maxHealth: config.botMaxHealth,
+      baseSpeed: config.botSpeed * def.speedMultiplier,
+      speed: config.botSpeed * def.speedMultiplier,
+      turnSpeed: config.botTurnSpeed * def.turnSpeedMultiplier,
+      health: def.maxHealth,
+      maxHealth: def.maxHealth,
       isAlive: true,
+      isExploding: false,
+      explosionTimer: 0,
       fireTimer: 0.6 + i * 0.4,
+      fireCooldown: def.fireCooldown,
       respawnTimer: 0,
+      isDodging: false,
     })
   }
 
@@ -78,6 +131,7 @@ export function createDogfightState(options = {}, userConfig = {}) {
     bullets: [],
     score: 0,
     kills: 0,
+    difficulty: calculateDifficulty(0),
     events: [],
     _nextBulletId: 1,
   }
@@ -87,6 +141,9 @@ export function stepDogfight(state, input = {}, delta = 0.016) {
   const dt = Math.max(0, delta)
   const config = state.config
   state.events = []
+
+  // Cập nhật độ khó dựa trên số kills
+  state.difficulty = calculateDifficulty(state.kills)
 
   // 1. Cập nhật vị trí & trạng thái Người chơi
   if (state.player.isAlive) {
@@ -130,33 +187,104 @@ export function stepDogfight(state, input = {}, delta = 0.016) {
     }
   }
 
+  // Kiểm tra đội hình: nếu cả 3 bot còn sống và ở ngoài tầm bắn 16, bay đội hình V
+  const aliveBots = state.bots.filter(b => b.isAlive)
+  const leaderBot = aliveBots[0]
+  const distToPlayer = leaderBot ? Math.hypot(state.player.x - leaderBot.x, state.player.z - leaderBot.z) : 0
+  const useFormation = aliveBots.length === 3 && distToPlayer > config.botAttackRange
+
   // 2. Cập nhật Bot AI
-  for (const bot of state.bots) {
+  for (let i = 0; i < state.bots.length; i++) {
+    const bot = state.bots[i]
+
     if (bot.isAlive) {
-      const dx = state.player.x - bot.x
-      const dz = state.player.z - bot.z
-      const dist = Math.hypot(dx, dz)
-      const targetAngle = Math.atan2(dz, dx)
+      // Cập nhật tốc độ theo độ khó tăng dần
+      bot.speed = bot.baseSpeed * state.difficulty.multiplier
 
-      // Xoay dần về phía người chơi
-      const angleDiff = normalizeAngle(targetAngle - bot.yaw)
-      const maxTurn = config.botTurnSpeed * dt
-      if (Math.abs(angleDiff) <= maxTurn) {
-        bot.yaw = targetAngle
-      }
-      else {
-        bot.yaw += Math.sign(angleDiff) * maxTurn
-      }
-      bot.yaw = normalizeAngle(bot.yaw)
+      let targetX = state.player.x
+      let targetZ = state.player.z
+      bot.isDodging = false
 
-      // Bay thẳng theo góc bot.yaw
+      // Xử lý cơ chế đội hình khi mới xuất hiện ở xa tầm bắn
+      if (useFormation && i > 0 && leaderBot) {
+        // Wingman giữ vị trí chữ V sau cánh leader
+        const side = i === 1 ? -3.5 : 3.5
+        const back = -4.5
+        const lx = Math.cos(leaderBot.yaw)
+        const lz = Math.sin(leaderBot.yaw)
+        // Perpendicular vector
+        const px = -lz
+        const pz = lx
+        targetX = leaderBot.x + lx * back + px * side
+        targetZ = leaderBot.z + lz * back + pz * side
+      }
+      // Khi tản ra vào tầm bắn: áp dụng hành vi từng loại bot
+      else if (bot.type === 'hard') {
+        // Bot Khó: né đạn khi có đạn tới gần trong 3 đơn vị
+        let threatBullet = null
+        let minBulletDist = 3.0
+
+        for (const bullet of state.bullets) {
+          if (bullet.owner !== 'player') continue
+          const bDist = Math.hypot(bullet.x - bot.x, bullet.z - bot.z)
+          if (bDist < minBulletDist) {
+            // Kiểm tra đạn có đang bay hướng về bot không
+            const toBotX = bot.x - bullet.x
+            const toBotZ = bot.z - bullet.z
+            const dot = bullet.vx * toBotX + bullet.vz * toBotZ
+            if (dot > 0) {
+              threatBullet = bullet
+              minBulletDist = bDist
+            }
+          }
+        }
+
+        if (threatBullet) {
+          // Né đạn bằng cách bẻ cua vuông góc với hướng đạn
+          bot.isDodging = true
+          const bulletAngle = Math.atan2(threatBullet.vz, threatBullet.vx)
+          const dodgeDir = normalizeAngle(bot.yaw - bulletAngle) >= 0 ? 1 : -1
+          const dodgeTargetAngle = normalizeAngle(bulletAngle + (Math.PI / 2) * dodgeDir)
+          const angleDiff = normalizeAngle(dodgeTargetAngle - bot.yaw)
+          bot.yaw = normalizeAngle(bot.yaw + Math.sign(angleDiff) * bot.turnSpeed * dt * 2.5)
+        }
+        else {
+          // Bot Khó biết vòng ra sau lưng người chơi (flanking)
+          const behindDist = 5.5
+          targetX = state.player.x - Math.cos(state.player.yaw) * behindDist
+          targetZ = state.player.z - Math.sin(state.player.yaw) * behindDist
+        }
+      }
+
+      if (!bot.isDodging) {
+        const dx = targetX - bot.x
+        const dz = targetZ - bot.z
+        const targetAngle = Math.atan2(dz, dx)
+
+        // Xoay dần về hướng mục tiêu
+        const angleDiff = normalizeAngle(targetAngle - bot.yaw)
+        const maxTurn = bot.turnSpeed * dt
+        if (Math.abs(angleDiff) <= maxTurn) {
+          bot.yaw = targetAngle
+        }
+        else {
+          bot.yaw += Math.sign(angleDiff) * maxTurn
+        }
+        bot.yaw = normalizeAngle(bot.yaw)
+      }
+
+      // Di chuyển theo góc bot.yaw
       bot.x += Math.cos(bot.yaw) * bot.speed * dt
       bot.z += Math.sin(bot.yaw) * bot.speed * dt
       bot.y = state.player.y ?? 5.5
 
-      // Khai hỏa khi trong tầm bắn 16 và trong góc hình nón trước mặt
-      const forwardAngleDiff = Math.abs(normalizeAngle(targetAngle - bot.yaw))
-      const canShoot = dist <= config.botAttackRange && forwardAngleDiff <= config.botAttackAngle && state.player.isAlive
+      // Khai hỏa khi trong tầm bắn 16 và góc hình nón trước mặt
+      const pDx = state.player.x - bot.x
+      const pDz = state.player.z - bot.z
+      const pDist = Math.hypot(pDx, pDz)
+      const toPlayerAngle = Math.atan2(pDz, pDx)
+      const forwardAngleDiff = Math.abs(normalizeAngle(toPlayerAngle - bot.yaw))
+      const canShoot = pDist <= config.botAttackRange && forwardAngleDiff <= config.botAttackAngle && state.player.isAlive
 
       if (bot.fireTimer > 0) {
         bot.fireTimer -= dt
@@ -177,21 +305,30 @@ export function stepDogfight(state, input = {}, delta = 0.016) {
           life: config.bulletLifetime,
           damage: config.botDamage,
         })
-        bot.fireTimer = config.botFireCooldown
+        bot.fireTimer = bot.fireCooldown ?? config.botFireCooldown
         state.events.push({ type: 'bot_shoot', botId: bot.id })
       }
     }
     else {
+      // Xử lý hiệu ứng nổ 0.5s trước khi ẩn hoàn toàn
+      if (bot.isExploding) {
+        bot.explosionTimer -= dt
+        if (bot.explosionTimer <= 0) {
+          bot.isExploding = false
+        }
+      }
+
       bot.respawnTimer -= dt
       if (bot.respawnTimer <= 0) {
         bot.isAlive = true
+        bot.isExploding = false
         bot.health = bot.maxHealth
         const respawnAngle = Math.random() * Math.PI * 2
         const respawnDist = config.botRespawnMinDist + Math.random() * (config.botRespawnMaxDist - config.botRespawnMinDist)
         bot.x = state.player.x + Math.cos(respawnAngle) * respawnDist
         bot.z = state.player.z + Math.sin(respawnAngle) * respawnDist
         bot.yaw = normalizeAngle(respawnAngle + Math.PI)
-        bot.fireTimer = config.botFireCooldown * 0.5
+        bot.fireTimer = (bot.fireCooldown ?? config.botFireCooldown) * 0.5
         state.events.push({ type: 'bot_respawn', botId: bot.id })
       }
     }
@@ -215,10 +352,20 @@ export function stepDogfight(state, input = {}, delta = 0.016) {
           state.events.push({ type: 'hit_bot', botId: bot.id, damage: bullet.damage })
           if (bot.health <= 0) {
             bot.isAlive = false
+            bot.isExploding = true
+            bot.explosionTimer = 0.5 // Hiện vụ nổ 0.5s rồi mới ẩn
             bot.respawnTimer = config.botRespawnDelay
             state.score += config.scorePerKill
             state.kills += 1
-            state.events.push({ type: 'bot_killed', botId: bot.id, score: state.score, kills: state.kills })
+            state.difficulty = calculateDifficulty(state.kills)
+            state.events.push({
+              type: 'bot_killed',
+              botId: bot.id,
+              botType: bot.type,
+              score: state.score,
+              kills: state.kills,
+              difficulty: state.difficulty,
+            })
           }
           break
         }
